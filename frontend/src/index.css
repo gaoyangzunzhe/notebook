@@ -1,0 +1,169 @@
+@import 'tailwindcss';
+
+/* 设计 token：stone/slate/blue 色系（参照「Notion 简洁 + 语雀温暖」），Tailwind v4 直接生成对应工具类。
+   主题色偏好通过运行时覆盖 --color-primary 实现（见 PreferencesContext）。 */
+@theme {
+  --color-bg: #fafaf9; /* stone-50  页面底色 */
+  --color-panel: #ffffff; /* white    卡片 / 面板 / Sidebar */
+  --color-border: #e7e5e4; /* stone-200 分割线 / 输入框边框 */
+  --color-border-weak: #f5f5f4; /* stone-100 卡片边框 */
+  --color-ink: #0f172a; /* slate-900 主标题 */
+  --color-muted: #475569; /* slate-600 正文 */
+  --color-faint: #94a3b8; /* slate-400 日期 / 次要文字 */
+  --color-fill: #f5f5f4; /* stone-100 未选中 pill / hover 底 */
+  --color-primary: #2563eb; /* blue-600  主按钮 / 选中文字 */
+  --color-primary-strong: #1d4ed8; /* blue-700  主按钮 hover / active */
+  --color-primary-weak: #eff6ff; /* blue-50   选中态背景 */
+  --color-primary-line: #dbeafe; /* blue-100  标签 pill 边框 */
+  --color-danger: #e5484d;
+  --color-ok: #30a46c;
+
+  --radius-card: 16px; /* rounded-2xl 卡片 / 弹窗 */
+  --radius-field: 8px; /* rounded-lg  按钮 / 输入框 */
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+  --shadow-pop:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1); /* shadow-lg 弹窗 / 下拉 */
+
+  --font-sans: 'Segoe UI', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+}
+
+/* 暗色模式：非分层 .dark 重声明变量（非分层规则优先级高于 @layer theme，
+   工具类消费 var(--color-*) 因此整体换肤；slate 系深色板）。 */
+.dark {
+  --color-bg: #0f172a;
+  --color-panel: #1e293b;
+  --color-border: #334155;
+  --color-border-weak: #263550;
+  --color-ink: #f8fafc;
+  --color-muted: #cbd5e1;
+  --color-faint: #64748b;
+  --color-fill: #1e293b;
+  --color-primary: #3b82f6;
+  --color-primary-strong: #2563eb;
+  --color-primary-weak: #1c3a5e;
+  --color-primary-line: #1e3a5f;
+  --color-danger: #f87171;
+  --color-ok: #4ade80;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+/* 细滚动条，贴近卡片风格 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-strong active:bg-primary-strong;
+  }
+  .btn-ghost {
+    @apply border border-border bg-panel text-muted hover:bg-fill hover:text-ink;
+  }
+  .btn-danger {
+    @apply bg-danger text-white hover:opacity-90;
+  }
+  .input {
+    @apply w-full rounded-lg border border-border bg-panel px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+  }
+  .card {
+    @apply rounded-card border border-border-weak bg-panel shadow-card;
+  }
+}
+
+/* Tiptap 编辑器正文样式 */
+.tiptap {
+  min-height: 100%;
+  font-size: 0.925rem;
+  line-height: 1.8;
+  color: var(--color-ink);
+}
+.tiptap p {
+  margin: 0.4em 0;
+}
+.tiptap h1,
+.tiptap h2,
+.tiptap h3 {
+  margin: 0.8em 0 0.4em;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.tiptap h1 {
+  font-size: 1.4em;
+}
+.tiptap h2 {
+  font-size: 1.22em;
+}
+.tiptap h3 {
+  font-size: 1.08em;
+}
+.tiptap ul,
+.tiptap ol {
+  margin: 0.4em 0;
+  padding-left: 1.4em;
+}
+.tiptap ul {
+  list-style: disc;
+}
+.tiptap ol {
+  list-style: decimal;
+}
+.tiptap blockquote {
+  margin: 0.6em 0;
+  border-left: 3px solid var(--color-border);
+  padding-left: 1rem;
+  color: var(--color-muted);
+}
+.tiptap pre {
+  margin: 0.6em 0;
+  overflow-x: auto;
+  border: 1px solid var(--color-border-weak);
+  border-radius: 8px;
+  background: var(--color-fill);
+  padding: 0.75rem 1rem;
+}
+.tiptap code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+  font-size: 0.9em;
+}
+.tiptap a {
+  color: var(--color-primary);
+}
+/* Tiptap placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  color: var(--color-faint);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

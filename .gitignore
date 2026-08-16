@@ -1,0 +1,28 @@
+# ===== Python / 后端 =====
+backend/.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# ===== 密钥：忽略 .env 但保留模板 =====
+.env
+.env.*
+!.env.example
+
+# ===== 运行产物（可重新生成）=====
+backend/data/
+
+# ===== Node / 前端 =====
+node_modules/
+frontend/dist/
+*.local
+
+# ===== 系统 / 编辑器 =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+log

@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "question": "Neptune 支持单文件最大多大？",
+    "gold_snippets": [
+      "Neptune 支持单文件最大 5GB，存储空间不设上限，适合图片、视频、数据库备份等大文件场景。"
+    ],
+    "note": "neptune-intro"
+  },
+  {
+    "id": 2,
+    "question": "Neptune 的数据默认存几份副本？",
+    "gold_snippets": [
+      "数据默认三副本冗余存储，跨三个可用区分布，单可用区故障不影响读写。"
+    ],
+    "note": "neptune-intro"
+  },
+  {
+    "id": 3,
+    "question": "开启版本管理后，旧版本可以回滚多久？",
+    "gold_snippets": [
+      "开启版本功能后，每次覆盖写入都会保留旧版本，可在 30 天内回滚到任意历史版本。"
+    ],
+    "note": "neptune-intro"
+  },
+  {
+    "id": 4,
+    "question": "Neptune 兼容什么协议方便迁移？",
+    "gold_snippets": [
+      "Neptune 提供 REST API、Python/Java/Go 等多种 SDK，并兼容 S3 协议，方便从其他云平台平滑迁移。"
+    ],
+    "note": "neptune-intro"
+  },
+  {
+    "id": 5,
+    "question": "新用户每月免费赠送多少存储容量？",
+    "gold_snippets": [
+      "新用户每月赠送 5GB 存储、50GB 外网流出流量以及 100 万次标准请求。"
+    ],
+    "note": "neptune-intro"
+  },
+  {
+    "id": 6,
+    "question": "上传对象成功后的响应里包含哪些字段？",
+    "gold_snippets": [
+      "上传成功后返回 201，响应体包含 object_id 和 version。",
+      "object_id 是对象的唯一标识，长度为 24 位十六进制字符串。"
+    ],
+    "note": "neptune-api"
+  },
+  {
+    "id": 7,
+    "question": "下载一个不存在的对象会返回什么状态码？",
+    "gold_snippets": [
+      "如果对象不存在，返回 404；如果对象存在但未开启下载权限，返回 403。"
+    ],
+    "note": "neptune-api"
+  },
+  {
+    "id": 8,
+    "question": "列举对象时 limit 的取值范围是多少？",
+    "gold_snippets": [
+      "limit 的取值范围是 1 到 1000，默认 100。"
+    ],
+    "note": "neptune-api"
+  },
+  {
+    "id": 9,
+    "question": "token 已过期时接口会返回哪个错误码？",
+    "gold_snippets": [
+      "401：认证失败，token 缺失或已过期。"
+    ],
+    "note": "neptune-api"
+  },
+  {
+    "id": 10,
+    "question": "每个 token 每分钟最多可以发起多少次请求？",
+    "gold_snippets": [
+      "限流规则是每个 token 每分钟最多 6000 次请求，超过后返回 429。"
+    ],
+    "note": "neptune-api"
+  },
+  {
+    "id": 11,
+    "question": "存储桶的命名有哪些要求？",
+    "gold_snippets": [
+      "桶名要求全小写、长度 3 到 63 位、只能包含数字和字母。"
+    ],
+    "note": "neptune-guide"
+  },
+  {
+    "id": 12,
+    "question": "Neptune 分片上传的单个分片有多大？",
+    "gold_snippets": [
+      "Neptune 的分片大小固定为 8MB，最多支持 10000 个分片。"
+    ],
+    "note": "neptune-guide"
+  },
+  {
+    "id": 13,
+    "question": "公开对象可以通过什么 URL 访问？",
+    "gold_snippets": [
+      "公开对象可通过 https://{bucket}.neptune.example.com 直接访问。"
+    ],
+    "note": "neptune-guide"
+  }
+]

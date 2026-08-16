@@ -1,0 +1,34 @@
+# ===== Web 框架 =====
+fastapi>=0.136.3,<0.137
+uvicorn[standard]>=0.48.0,<0.49
+python-multipart>=0.0.20        # FastAPI 文件上传必需
+aiofiles>=24.1                  # 异步文件写入
+
+# ===== 配置 / 校验 =====
+pydantic>=2.11,<3
+pydantic-settings>=2.6,<3
+
+# ===== 关系数据库（懒连接）=====
+sqlalchemy[asyncio]>=2.0.50,<3
+asyncpg>=0.31.0
+
+# ===== RAG =====
+langchain>=1.2.13,<2
+langchain-classic>=1.0.8,<2     # LangChain 1.x 中遗留 chains（create_retrieval_chain 等）
+langchain-openai>=1.1.11,<2     # ChatOpenAI(DeepSeek) + OpenAIEmbeddings(DashScope)，均为 OpenAI 兼容
+langchain-community>=0.4.1,<1   # PyPDFLoader / TextLoader
+langchain-chroma>=1.1.0,<2      # Chroma 向量库集成
+langchain-text-splitters>=0.3.9 # RecursiveCharacterTextSplitter
+chromadb>=1.5.5,<2
+pypdf>=6.9.0,<7                 # PDF 解析
+python-docx>=1.1,<2             # .docx 解析
+python-pptx>=1.0,<2             # .pptx 解析
+
+# ===== 认证 =====
+bcrypt>=4.2,<6                  # 密码哈希（已装）
+PyJWT>=2.9,<3                   # JWT 编解码
+cryptography>=42.0              # Fernet 加密用户级 API Key
+email-validator>=2.0            # pydantic EmailStr
+
+# ===== 头像处理 =====
+Pillow>=10.0                    # 头像校验 / 缩放
