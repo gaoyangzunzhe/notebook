@@ -2,14 +2,20 @@
 
 VectorStoreManager 是向量库的"单点隔离"——后续若迁移到 Chroma HTTP/Cloud 版，
 只需改动本类，上层 pipeline / 路由无需感知。
+
+同步方法（add_documents 等）都是阻塞 I/O，会卡住事件循环：
+调用方一律走 ``a_*`` 异步包装（asyncio.to_thread 卸载到线程池）。
 """
+import asyncio
 import logging
+import time
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
+from app.core import metrics
 from app.core.config import Settings
 from app.core.errors import RAGConfigurationError, RAGUnavailableError
 from app.services.rag.embeddings import get_embeddings
@@ -196,3 +202,27 @@ class VectorStoreManager:
             raise
         except Exception as e:  # noqa: BLE001
             raise RAGUnavailableError(f"更新向量块分类失败: {e}") from e
+
+    # ---- 异步包装：Chroma 是同步阻塞 I/O，全部丢线程池，避免卡死事件循环 ----
+
+    async def a_add_documents(self, *args, **kwargs) -> int:
+        start = time.monotonic()
+        try:
+            result = await asyncio.to_thread(self.add_documents, *args, **kwargs)
+        except RAGConfigurationError:
+            metrics.record_embed((time.monotonic() - start) * 1000, error=True)
+            raise
+        except Exception:
+            metrics.record_embed((time.monotonic() - start) * 1000, error=True)
+            raise
+        metrics.record_embed((time.monotonic() - start) * 1000)
+        return result
+
+    async def a_search(self, *args, **kwargs) -> list[tuple[Document, float]]:
+        return await asyncio.to_thread(self.search, *args, **kwargs)
+
+    async def a_update_doc_category(self, *args, **kwargs) -> int:
+        return await asyncio.to_thread(self.update_doc_category, *args, **kwargs)
+
+    async def a_delete_by_doc(self, *args, **kwargs) -> int:
+        return await asyncio.to_thread(self.delete_by_doc, *args, **kwargs)

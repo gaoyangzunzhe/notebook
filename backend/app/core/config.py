@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     # ---- 关系数据库（懒连接：启动时不强连）----
     database_url: str = ""
 
+    # ---- Redis（可选）：配置后启用缓存（提供商模型列表等）；为空 = 缓存禁用，功能不受影响 ----
+    redis_url: str = ""
+
     # ---- 认证（JWT）----
     # SECRET_KEY 生产环境必须用强随机密钥；dev 默认值仅保证 .env 缺失时也能启动
     secret_key: str = "dev-insecure-secret-change-me"
@@ -67,6 +70,18 @@ class Settings(BaseSettings):
     assist_max_note_chars: int = 8000  # 续写时传给模型的笔记正文截断上限
     assist_max_context_chars: int = 3200  # 参考资料片段总量预算
     assist_timeout_seconds: int = 120  # 单次 assist 流式生成总预算
+
+    # ---- AI 调用护栏（LLM/嵌入是成本与并发大头，按用户限流 + 全局并发上限）----
+    ai_quota_limit: int = 30  # 每用户每小时 AI 调用上限（RAG 提问/辅助写作/自动分类/上传），0 = 关闭
+    ai_quota_window_seconds: int = 3600
+    ai_max_concurrent_llm: int = 4  # 全局并发 LLM/嵌入调用上限（防重试风暴打爆成本/厂商 429）
+    llm_request_timeout: int = 120  # 单次 LLM 请求超时（秒）
+    llm_max_retries: int = 2  # OpenAI SDK 指数退避重试次数
+    embed_request_timeout: int = 120  # 单次嵌入请求超时（秒）
+    embed_max_retries: int = 2
+
+    # ---- 模型列表缓存（Redis，可选；未配置 REDIS_URL 时缓存自动失效，功能不受影响）----
+    model_cache_ttl_seconds: int = 300  # 提供商模型列表在线拉取缓存时长
 
     # ---- 应用元信息 ----
     app_name: str = "notebook-api"

@@ -4,7 +4,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_rag, get_settings
+from app.api.deps import check_ai_quota, get_current_user, get_rag, get_settings
 from app.core.config import Settings
 from app.db.session import get_db
 from app.models import User
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/rag", tags=["rag"])
 @router.post("/query", response_model=QueryResponse)
 async def rag_query(
     body: QueryRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_ai_quota),
     rag: RAGPipeline = Depends(get_rag),
     settings: Settings = Depends(get_settings),
     db_session: AsyncSession | None = Depends(get_db),

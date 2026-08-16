@@ -9,7 +9,11 @@
 import asyncio
 import json
 import logging
+import time
 from typing import AsyncIterator
+
+from app.core import metrics
+from app.core.guard import llm_slot
 
 logger = logging.getLogger(__name__)
 
@@ -138,20 +142,26 @@ async def stream_assist(
     - 中途异常：发 error 事件后结束（不再发 done）
     - 客户端断开：asyncio.CancelledError 直接向上抛，由 Starlette 清理，不发 error
     """
+    start = time.monotonic()
     try:
-        async with asyncio.timeout(timeout_seconds):
-            async for chunk in llm.astream(messages):
-                text = _extract_text(chunk)
-                if text:
-                    yield _sse({"type": "token", "content": text})
+        # 整个流占一个并发槽：并发流数 <= ai_max_concurrent_llm；
+        # 生成器被 close（客户端断开）时 __aexit__ 自动释放
+        async with llm_slot():
+            async with asyncio.timeout(timeout_seconds):
+                async for chunk in llm.astream(messages):
+                    text = _extract_text(chunk)
+                    if text:
+                        yield _sse({"type": "token", "content": text})
     except asyncio.CancelledError:
         logger.info("assist 流被客户端中断")
         raise
     except Exception as e:  # noqa: BLE001
+        metrics.record_llm((time.monotonic() - start) * 1000, error=True)
         logger.warning("assist 生成中途失败: %s", e)
         try:
             yield _sse({"type": "error", "message": "生成中断，请重试"})
         except Exception:  # noqa: BLE001
             pass
         return
+    metrics.record_llm((time.monotonic() - start) * 1000)
     yield _sse({"type": "done", "content": ""})

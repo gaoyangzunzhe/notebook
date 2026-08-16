@@ -6,15 +6,19 @@
 - 数据库写入逐个 try/except 守护：DB 不可用时静默降级（db_persisted=False），
   绝不因数据库问题导致请求失败。
 """
+import asyncio
 import logging
+import time
 from pathlib import Path
 from uuid import uuid4
 
 from langchain_core.documents import Document
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import metrics
 from app.core.config import Settings
-from app.core.errors import RAGUnavailableError
+from app.core.errors import RAGConfigurationError, RAGUnavailableError
+from app.core.guard import llm_slot
 from app.models import ChatMessage, DocumentRecord
 from app.services.rag.chain import build_retrieval_chain
 from app.services.rag.loader import load_document
@@ -48,22 +52,25 @@ class RAGPipeline:
         embed_overrides 由端点层按用户级嵌入配置解析后传入。
         """
         doc_id = uuid4().hex
-        docs = load_document(path, filename)
-        chunks = split_documents(
-            docs,
-            chunk_size=chunk_size or self._settings.chunk_size,
-            chunk_overlap=self._settings.chunk_overlap,
-        )
-        if not chunks:
-            raise RAGUnavailableError("文档内容为空，无法切分")
+        # 整段占一个并发槽：文件解析 + 切分 + 向量化是上传最重的部分，限制并发上传
+        async with llm_slot():
+            docs = await asyncio.to_thread(load_document, path, filename)
+            chunks = await asyncio.to_thread(
+                split_documents,
+                docs,
+                chunk_size=chunk_size or self._settings.chunk_size,
+                chunk_overlap=self._settings.chunk_overlap,
+            )
+            if not chunks:
+                raise RAGUnavailableError("文档内容为空，无法切分")
 
-        chunk_count = self.vectorstore.add_documents(
-            chunks,
-            user_id=user_id,
-            doc_id=doc_id,
-            category=category,
-            embed_overrides=embed_overrides,
-        )
+            chunk_count = await self.vectorstore.a_add_documents(
+                chunks,
+                user_id=user_id,
+                doc_id=doc_id,
+                category=category,
+                embed_overrides=embed_overrides,
+            )
         db_persisted = await self._persist_document(
             db_session, doc_id, filename, chunk_count, user_id, stored_name, category
         )
@@ -89,25 +96,34 @@ class RAGPipeline:
         llm_overrides / similarity_threshold / embed_overrides 由端点层按用户设置
         解析后传入，不修改缓存的 RAGPipeline 自身配置。
         """
-        scored = self.vectorstore.search(
-            question,
-            k,
-            user_id=user_id,
-            category=category,
-            min_score=similarity_threshold,
-            embed_overrides=embed_overrides,
-        )
-
-        retriever = self.vectorstore.get_retriever(
-            k, user_id=user_id, category=category, embed_overrides=embed_overrides
-        )
-        chain = build_retrieval_chain(
-            self._settings, retriever, llm_overrides=llm_overrides
-        )
-        try:
-            result = await chain.ainvoke({"input": question})
-        except Exception as e:  # noqa: BLE001
-            raise RAGUnavailableError(f"对话模型调用失败: {e}") from e
+        # 检索（嵌入）+ 生成（LLM）共用同一并发槽：杜绝 a_search/ainvoke 双重获取
+        async with llm_slot():
+            try:
+                scored = await self.vectorstore.a_search(
+                    question,
+                    k,
+                    user_id=user_id,
+                    category=category,
+                    min_score=similarity_threshold,
+                    embed_overrides=embed_overrides,
+                )
+                retriever = self.vectorstore.get_retriever(
+                    k, user_id=user_id, category=category, embed_overrides=embed_overrides
+                )
+                chain = build_retrieval_chain(
+                    self._settings, retriever, llm_overrides=llm_overrides
+                )
+            except RAGConfigurationError:
+                raise
+            start = time.monotonic()
+            try:
+                result = await chain.ainvoke({"input": question})
+            except RAGConfigurationError:
+                raise
+            except Exception as e:  # noqa: BLE001
+                metrics.record_llm((time.monotonic() - start) * 1000, error=True)
+                raise RAGUnavailableError(f"对话模型调用失败: {e}") from e
+            metrics.record_llm((time.monotonic() - start) * 1000)
 
         answer = (result.get("answer") or "").strip()
         if session_id:

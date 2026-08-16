@@ -63,4 +63,7 @@ def get_embeddings(
         # 按提供商上限内部分批：DashScope 单次 ≤20，OpenAI 默认 1000 会直接超限
         chunk_size=settings.embed_batch_size,
         check_embedding_ctx_length=False,
+        # 请求超时 + 指数退避重试，防慢/挂起请求无限占用并发槽
+        request_timeout=settings.embed_request_timeout,
+        max_retries=settings.embed_max_retries,
     )

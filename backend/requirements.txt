@@ -12,6 +12,9 @@ pydantic-settings>=2.6,<3
 sqlalchemy[asyncio]>=2.0.50,<3
 asyncpg>=0.31.0
 
+# ===== Redis（可选：模型列表缓存；未配置 REDIS_URL 时自动禁用）=====
+redis>=5.0,<7
+
 # ===== RAG =====
 langchain>=1.2.13,<2
 langchain-classic>=1.0.8,<2     # LangChain 1.x 中遗留 chains（create_retrieval_chain 等）

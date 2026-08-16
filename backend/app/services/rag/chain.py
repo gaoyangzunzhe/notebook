@@ -50,6 +50,9 @@ def get_llm(settings: Settings, *, overrides: dict | None = None) -> ChatOpenAI:
         api_key=api_key,
         base_url=base_url,
         temperature=cfg.get("temperature", settings.llm_temperature),
+        # 请求超时 + 指数退避重试（OpenAI SDK 自带），防慢/挂起请求无限占用并发槽
+        request_timeout=settings.llm_request_timeout,
+        max_retries=settings.llm_max_retries,
     )
 
 

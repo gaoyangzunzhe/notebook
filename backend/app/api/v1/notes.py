@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_rag, get_settings
+from app.api.deps import check_ai_quota, get_current_user, get_rag, get_settings
 from app.core.config import Settings
 from app.db.session import get_db
 from app.models import DocumentRecord, Note, User
@@ -196,7 +196,7 @@ async def related_documents(
     if not query:
         return RelatedDocumentListResponse(related=[])
 
-    scored = rag.vectorstore.search(
+    scored = await rag.vectorstore.a_search(
         query,
         k=5,
         user_id=current_user.id,
@@ -247,7 +247,7 @@ async def related_documents(
 async def note_assist(
     note_id: int,
     body: AssistRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_ai_quota),
     settings: Settings = Depends(get_settings),
     db_session: AsyncSession | None = Depends(get_db),
 ) -> StreamingResponse:
@@ -290,7 +290,7 @@ async def note_assist(
 @router.post("/{note_id}/tags", response_model=TagResponse)
 async def note_tag(
     note_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_ai_quota),
     settings: Settings = Depends(get_settings),
     db_session: AsyncSession | None = Depends(get_db),
 ) -> TagResponse:

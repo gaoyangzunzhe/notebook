@@ -4,6 +4,7 @@ GET 回 stored 值（None = 继承全局）、api_key_set 标记与 effective（
 永不回传明文 Key。PUT 按组（llm / kb / ui）部分更新，至少一组；
 provider 校验 ∈ PROVIDERS（模型不设白名单），字段按「显式出现」更新，null=清除覆盖。
 """
+import hashlib
 import logging
 
 import httpx
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # get_settings 别名 get_app_settings：本模块的 GET 端点也叫 get_settings，
 # 若不改名，PUT 端点的 Depends(get_settings) 会解析到端点函数本身。
 from app.api.deps import get_current_user, get_settings as get_app_settings
+from app.core.cache import cache_get, cache_set
 from app.core.config import Settings
 from app.core.crypto import decrypt_secret, encrypt_secret
 from app.db.session import get_db
@@ -332,7 +334,25 @@ async def provider_models(
     if _normalize_url(target_base) != _normalize_url(resolved_base):
         api_key = None
 
-    return await _fetch_provider_models(target_base, api_key, list(info["models"]))
+    # 缓存（Redis，可选）：key 只含 base_url + 是否有 key + 注册表指纹，不含密钥明文；
+    # 未配置 REDIS_URL 时 cache_get 恒返回 None，直接走在线拉取。
+    cache_key = "models:{0}:{1}:{2}".format(
+        target_base,
+        "key" if api_key else "nokey",
+        hashlib.md5("|".join(info["models"]).encode()).hexdigest()[:8],
+    )
+    cached = await cache_get(settings, cache_key)
+    if cached is not None:
+        try:
+            return ProviderModelsOut.model_validate_json(cached)
+        except Exception:  # noqa: BLE001
+            logger.debug("模型列表缓存反序列化失败，忽略缓存")
+
+    result = await _fetch_provider_models(target_base, api_key, list(info["models"]))
+    await cache_set(
+        settings, cache_key, result.model_dump_json(), settings.model_cache_ttl_seconds
+    )
+    return result
 
 
 async def _fetch_provider_models(

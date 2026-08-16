@@ -6,6 +6,7 @@ from app.api.v1 import (
     chat,
     documents,
     health,
+    metrics,
     notes,
     rag,
     settings,
@@ -19,3 +20,4 @@ api_router.include_router(rag.router)
 api_router.include_router(settings.router)
 api_router.include_router(chat.router)
 api_router.include_router(notes.router)
+api_router.include_router(metrics.router)

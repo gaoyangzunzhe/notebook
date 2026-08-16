@@ -15,9 +15,19 @@ class RAGUnavailableError(RAGError):
     """RAG 提供方运行时失败（embedding/LLM/向量库不可用）。"""
 
 
+class RateLimitExceeded(RAGError):
+    """AI 调用配额超限（按用户滑动窗口，429）。"""
+
+
 def rag_config_error_handler(request: Request, exc: RAGConfigurationError) -> JSONResponse:
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
 def rag_unavailable_error_handler(request: Request, exc: RAGUnavailableError) -> JSONResponse:
     return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+def rate_limit_error_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429, content={"detail": str(exc) or "请求过于频繁，请稍后再试"}
+    )

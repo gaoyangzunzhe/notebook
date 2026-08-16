@@ -4,9 +4,12 @@
 """
 import asyncio
 import logging
+import time
 
+from app.core import metrics
 from app.core.config import Settings
-from app.core.errors import RAGUnavailableError
+from app.core.errors import RAGConfigurationError, RAGUnavailableError
+from app.core.guard import llm_slot
 from app.models import NOTE_TAGS
 from app.services.rag.chain import get_llm
 
@@ -44,11 +47,17 @@ async def classify_tag(
         {"role": "system", "content": _system_prompt()},
         {"role": "user", "content": f"笔记标题：{title}\n\n笔记内容：\n{content}"},
     ]
+    start = time.monotonic()
     try:
-        async with asyncio.timeout(30):
-            resp = await llm.ainvoke(messages)
+        async with llm_slot():
+            async with asyncio.timeout(30):
+                resp = await llm.ainvoke(messages)
+    except RAGConfigurationError:
+        raise
     except Exception as e:  # noqa: BLE001
+        metrics.record_llm((time.monotonic() - start) * 1000, error=True)
         logger.warning("标签分类调用失败: %s", e)
         raise RAGUnavailableError(f"标签分类调用失败: {e}") from e
+    metrics.record_llm((time.monotonic() - start) * 1000)
     raw = resp.content if isinstance(resp.content, str) else str(resp.content or "")
     return _normalize(raw)

@@ -16,6 +16,7 @@ import chromadb
 from chromadb.config import Settings as ChromaSettings
 
 from app.core.config import Settings
+from app.core.guard import check_quota
 from app.core.security import decode_access_token
 from app.db import session as db_session
 from app.db.session import get_db
@@ -88,6 +89,20 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
+
+
+async def check_ai_quota(
+    current_user: User = Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
+) -> User:
+    """每用户 AI 调用配额依赖（滑动窗口）。
+
+    只有花钱/耗资源端点挂它；``ai_quota_limit <= 0`` 表示关闭（恒放行）。
+    超限抛 RateLimitExceeded -> 429（FastAPI 缓存依赖，get_current_user 不会重复执行）。
+    """
+    if settings.ai_quota_limit > 0:
+        check_quota(f"user:{current_user.id}")
+    return current_user
 
 
 # ---- 组件状态探测（供健康检查展示，只做轻量探测，不硬失败）----

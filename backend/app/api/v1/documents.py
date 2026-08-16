@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_rag, get_settings
+from app.api.deps import check_ai_quota, get_current_user, get_rag, get_settings
 from app.core.config import Settings
 from app.core.errors import RAGUnavailableError
 from app.db.session import get_db
@@ -75,7 +75,7 @@ async def _collect_categories(session: AsyncSession, user_id: int) -> list[str]:
 async def upload_document(
     file: UploadFile = File(...),
     category: str | None = Form(default=None, description="文档分类，缺省为未分类"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_ai_quota),
     rag: RAGPipeline = Depends(get_rag),
     settings: Settings = Depends(get_settings),
     db_session: AsyncSession | None = Depends(get_db),
@@ -249,7 +249,7 @@ async def update_document_category(
 
     category = body.category.strip()
     try:
-        rag.vectorstore.update_doc_category(doc_id, current_user.id, category)
+        await rag.vectorstore.a_update_doc_category(doc_id, current_user.id, category)
     except RAGUnavailableError as e:
         logger.warning("更新文档向量块分类失败: %s", e)
         raise HTTPException(status_code=503, detail=f"更新失败：{e}") from e
@@ -291,7 +291,7 @@ async def delete_document(
 
     # 1) 删向量块（失败抛 RAGUnavailableError -> 503，避免留孤儿块）
     try:
-        rag.vectorstore.delete_by_doc(doc_id, current_user.id)
+        await rag.vectorstore.a_delete_by_doc(doc_id, current_user.id)
     except RAGUnavailableError as e:
         logger.warning("删除文档向量块失败: %s", e)
         raise HTTPException(status_code=503, detail=f"删除失败：{e}") from e
